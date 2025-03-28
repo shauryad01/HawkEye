@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import MicActive as ma
+import CamActive as ca
 import EmergencyWords as ew
 import settings
 import cv2
@@ -8,29 +9,10 @@ import time
 # Initialize the emergency trigger event
 settings.emergency_triggered = mp.Event()
 
-def camera_stream():
+def camera_stream(event):
     print("[CAM] Camera process started")
-    cap = cv2.VideoCapture(0)
-    time.sleep(1)  # Camera warm-up time
+    ca.cam_active(event)
 
-    while cap.isOpened():
-        _, frame = cap.read()
-        if not _:
-            break
-        
-        cv2.imshow("Camera", frame)
-
-        if settings.emergency_triggered.is_set():
-            print("[CAM] Emergency detected! Stopping camera.")
-            break
-
-        if cv2.waitKey(1) == ord('q'):  
-            settings.emergency_triggered.set()
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-    print("[CAM] Camera process stopped.")
 
 # Function for volume detection
 def volume_stream(event):
@@ -48,7 +30,7 @@ def emergency_stream(event):
 # Main function to start processes
 def main():
     # Create processes for tasks
-    camera_process = mp.Process(target=camera_stream, daemon=True)
+    camera_process = mp.Process(target=camera_stream, args=(settings.emergency_triggered,), daemon=True)
     volume_process = mp.Process(target=volume_stream, args=(settings.emergency_triggered,), daemon=True)
     emergency_process = mp.Process(target=emergency_stream, args=(settings.emergency_triggered,), daemon=True)
 
