@@ -1,58 +1,100 @@
+import os
 import time
 import random
 import requests
-from twilio.rest import Client  # Twilio for WhatsApp & Calls
+from dotenv import load_dotenv
+from twilio.rest import Client
 
-# 🔹 Telegram Bot Configuration (Free Unlimited SMS)
-TELEGRAM_BOT_TOKEN = "7717557541:AAFBj3Jm2Sp3-MeudL2jucaqeDU56XhWF-o"
-TELEGRAM_CHAT_ID = "1092740393"
+# Load environment variables
+load_dotenv()
 
-# 🔹 Twilio API (Free WhatsApp & Calls)
-TWILIO_ACCOUNT_SID = "AC99e7e1ff553fc8f07f84ff873d8b5acc"
-TWILIO_AUTH_TOKEN = "d74fbc67555db48295933a0f429d2696"
-TWILIO_WHATSAPP_NUMBER = "whatsapp:+14155238886"  # Twilio sandbox number
-YOUR_WHATSAPP_NUMBER = "whatsapp:+918595046356"  # Your verified WhatsApp number
-TWILIO_CALL_NUMBER = "+18723122164"  # Twilio phone number
+# 🔹 Twilio Configuration
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER")
+TWILIO_CALL_NUMBER = os.getenv("TWILIO_CALL_NUMBER")
+YOUR_WHATSAPP_NUMBER = os.getenv("YOUR_WHATSAPP_NUMBER")
 
+# 🔹 Telegram Configuration
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+# 🔹 SendGrid API (For Email)
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+SENDGRID_API_URL = os.getenv("SENDGRID_API_URL")
+EMAIL_SENDER = os.getenv("EMAIL_SENDER")
+EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER")
+
+# Initialize Twilio client
+client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+
+# Function to check the condition (Simulated)
 def check_status():
-    return random.choice([True, False])  # Simulated True/False condition
+    return random.choice([True, False])
 
-# Function to send alert via Telegram
-def send_telegram_message():
-    message = "🚨 Urgent Alert! Please respond immediately."
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
-    requests.post(url, json=data)
-    print("[INFO] Telegram Alert Sent")
+# Function to send Telegram alert
+def send_telegram():
+    telegram_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    message = {"chat_id": TELEGRAM_CHAT_ID, "text": "🚨 Urgent Alert! Please respond immediately."}
+    response = requests.post(telegram_url, json=message)
+    print("[INFO] Telegram Alert Sent:", response.status_code)
 
 # Function to send WhatsApp alert via Twilio
 def send_whatsapp():
-    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
     message = client.messages.create(
         from_=TWILIO_WHATSAPP_NUMBER,
         body="🚨 Urgent Alert! Please respond.",
         to=YOUR_WHATSAPP_NUMBER
     )
-    print("[INFO] WhatsApp Alert Sent", message.sid)
+    print("[INFO] WhatsApp Alert Sent:", message.sid)
 
 # Function to make a call via Twilio
 def make_call():
-    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
     call = client.calls.create(
-        twiml='<Response><Say>Urgent alert! Please respond immediately.</Say></Response>',
+        twiml="<Response><Say>Urgent alert! Please respond immediately.</Say></Response>",
         from_=TWILIO_CALL_NUMBER,
-        to=YOUR_WHATSAPP_NUMBER.replace("whatsapp:", "")  # Convert WhatsApp to normal number
+        to=YOUR_WHATSAPP_NUMBER.replace("whatsapp:", "")  # Convert WhatsApp to a normal number
     )
-    print("[INFO] Call Alert Sent", call.sid)
+    print("[INFO] Call Alert Sent:", call.sid)
 
-random_input= bool(input("enter true or false"))
-# Main loop to check status and send notificationswhile  random_input==True:
-if random_input == True :
-    print("[ALERT] Condition met! Sending notifications...")
-    send_telegram_message()
-    send_whatsapp()
-    make_call()
-else:
-    print("[INFO] No action required.")
-    time.sleep(15)  # Check status again after 15 seconds
+# Function to send email via SendGrid
+def send_email():
+    headers = {
+        "Authorization": f"Bearer {SENDGRID_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "personalizations": [{"to": [{"email": EMAIL_RECEIVER}]}],
+        "from": {"email": EMAIL_SENDER},
+        "subject": "🚨 Urgent: Action Required",
+        "content": [{"type": "text/plain", "value": "The system detected an issue. Please respond immediately."}]
+    }
+    response = requests.post(SENDGRID_API_URL, json=data, headers=headers)
+    print("[INFO] Email Alert Sent:", response.status_code, response.text)
+
+# Function to check if the authority has responded (Simulated API Check)
+def check_response():
+    try:
+        response = requests.get("https://your-server.com/check-response")  # Replace with actual API
+        return response.json().get("response_received", False)
+    except Exception as e:
+        print("[ERROR] Checking response failed:", e)
+        return False
+
+# Main loop to check status and send notifications
+while True:
+    if check_status():
+        print("[ALERT] Condition met! Sending notifications...")
+
+        while not check_response():
+            send_telegram()   
+            send_whatsapp()   
+            send_email()      
+            make_call()       
+            time.sleep(15)    # Wait 15 sec before sending again
+
+        print("[INFO] Response received. Stopping notifications.")
+    else:
+        print("[INFO] No action required.")
+
+    time.sleep(15)  # Check status again after 15 sec
