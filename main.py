@@ -1,40 +1,81 @@
+import multiprocessing as mp
+import MicActive as ma
+import EmergencyWords as ew
+import settings
 import cv2
 import time
-import datetime
-from micActive import get_volume
 
-mic=True
-FaceCam=True
+# Initialize the emergency trigger event
+settings.emergency_triggered = mp.Event()
 
-face_cascade=cv2.CascadeClassifier(cv2.data.haarcascades+"haarcascade_frontalface_default.xml")
-body_cascade=cv2.CascadeClassifier(cv2.data.haarcascades+"haarcascade_fullbody.xml")
-# hand_cascade = cv2.CascadeClassifier("C:\Projects\HawkEye\HawkEye\hand.xml")
+def camera_stream():
+    print("[CAM] Camera process started")
+    cap = cv2.VideoCapture(0)
+    time.sleep(1)  # Camera warm-up time
+
+    while cap.isOpened():
+        _, frame = cap.read()
+        if not _:
+            break
+        
+        cv2.imshow("Camera", frame)
+
+        if settings.emergency_triggered.is_set():
+            print("[CAM] Emergency detected! Stopping camera.")
+            break
+
+        if cv2.waitKey(1) == ord('q'):  
+            settings.emergency_triggered.set()
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+    print("[CAM] Camera process stopped.")
+
+# Function for volume detection
+def volume_stream(event):
+    time.sleep(2)
+    print("[VOL] Starting volume detection...")
+    ma.get_volume(event)
+
+# Function for emergency word detection
+def emergency_stream(event):
+    time.sleep(2)
+    print("[EMG] Starting emergency word detection...")
+    ew.detect_emergency_words(event)
 
 
+# Main function to start processes
+def main():
+    # Create processes for tasks
+    camera_process = mp.Process(target=camera_stream, daemon=True)
+    volume_process = mp.Process(target=volume_stream, args=(settings.emergency_triggered,), daemon=True)
+    emergency_process = mp.Process(target=emergency_stream, args=(settings.emergency_triggered,), daemon=True)
 
-if mic or FaceCam:
-        cap=cv2.VideoCapture(0)
-        while True:            
-            _, frame=cap.read()
-            cv2.imshow('Camera', frame)
-            
-            # vol=next(get_volume())
-            
-            gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-            faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-            bodies = body_cascade.detectMultiScale(gray, 1.3, 5)
-            # hands = hand_cascade.detectMultiScale(gray, 1.3, 5)   
-                
-            # if vol>=75:    
-            for(x, y, width, height) in faces:
-                cv2.rectangle(frame, (x, y), (x + width, y + height), (255, 0, 0), 3)
-                            
-            for(x, y, width, height) in bodies:
-                cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 3)
-                                
-                # for(x, y, width, height) in hands:
-                #     cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 0, 255), 3)
-            if cv2.waitKey(1)==ord('q'):
-                break
-cap.release()
-cv2.destroyAllWindows()
+    # Start Processes
+    camera_process.start()
+    volume_process.start()
+    emergency_process.start()
+
+    print("[MAIN] All processes started.")
+
+    # Monitor the emergency event in the main thread
+    while not settings.emergency_triggered.is_set():
+        time.sleep(0.5)
+
+    print("[MAIN] Emergency triggered! Stopping all processes...")
+
+    # Stop all processes when emergency is triggered
+    camera_process.terminate()
+    volume_process.terminate()
+    emergency_process.terminate()
+
+    # Wait for processes to finish
+    camera_process.join()
+    volume_process.join()
+    emergency_process.join()
+
+    print("[MAIN] Program exited.")
+
+if __name__ == "__main__":
+    main()
