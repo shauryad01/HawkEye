@@ -1,37 +1,47 @@
 import speech_recognition as sr
+import settings
+import MicActive as ma
 
-DEBUG = True
-
-EMERGENCY_WORDS = {"help", "stop"}
-
-def detect_emergency_words():
+def detect_emergency_words(event):
+    """Detects emergency words using speech recognition and triggers emergency event."""
+    
     recognizer = sr.Recognizer()
     mic = sr.Microphone()
-
+    
     with mic as source:
-        print("Listening for emergency words...")
+        print("[EMG] Listening for emergency words...")
         recognizer.adjust_for_ambient_noise(source)
-        while True:     
-            try:       
+
+        while not event.is_set():  # Stop immediately if triggered
+            try:
+                if event.is_set():
+                    print("[EMG] Emergency already triggered! Stopping word detection.")
+                    break  
                 print("Listening...")
-                audio = recognizer.listen(source, timeout=10, phrase_time_limit=10)
-                text = recognizer.recognize_google(audio).lower()
-                if DEBUG:
-                    print(f"Detected: {text}")
 
-                for word in EMERGENCY_WORDS:
+                if not settings.DEBUG1:
+                    audio = recognizer.listen(source)
+                    text = recognizer.recognize_google(audio).lower()
+                else:
+                    text = "help"
+
+                print(f"[EMG] Detected: {text}")
+
+                for word in settings.emergency_words:
                     if word in text:
-                        print("Emergency word detected!")
-                        return True
-            except sr.UnknownValueError:
-                print("Could not understand the audio.")
-            except sr.RequestError:
-                print("Speech Recognition API error.")
-            except KeyboardInterrupt:
-                print("Stopping detection...")
-                break
-            
-    return False
+                        print("[EMG] Emergency word detected! Activating Security System...")
+                        event.set()
+                        return
 
-if DEBUG:
-    detect_emergency_words()
+            except sr.UnknownValueError:
+                if not settings.DEBUG1:
+                    if ma.decibels[0] >= 35:
+                        print("[EMG] Could not understand the audio.")
+            except sr.RequestError:
+                if not settings.DEBUG1:
+                    print("[EMG] Speech Recognition API error.")
+            except KeyboardInterrupt:
+                print("[EMG] Stopping detection...")
+                break
+
+    print("[EMG] Emergency words detection stopped.")
