@@ -8,7 +8,7 @@ emergency_triggered = threading.Event()
 DEBUG = False    # Uses microphone
 DEBUG1 = False   # Does not use microphone
 
-MIC_SENSITIVITY_THRESHOLD = 75
+MIC_SENSITIVITY_THRESHOLD = 85
 MIC_TIMEOUT = 10
 MIC_PHRASE_TIME_LIMIT = 10
 
