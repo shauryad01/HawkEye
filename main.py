@@ -1,9 +1,11 @@
 import tkinter as tk
 from detection_module import run_detection
 from detection_module import start_camera
-from open_folders import open_feedback_folder, open_screenshots_folder
-from model_train import retrain_model
+from model_training import retrain_model
 import cv2
+import subprocess
+import settings 
+import os
 
 def open_detection_screen(self):
     self.controller.show_frame("DetectionScreen")
@@ -34,27 +36,34 @@ class HawkEyeApp(tk.Tk):
         frame.tkraise()
 
 class MainMenu(tk.Frame):
-    
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
 
         frame = tk.Frame(self)
-        
         frame.pack(expand=True, fill="both")
-        
+
         tk.Label(frame, text="Hawkeye Security System", font=('Arial', 24)).pack(pady=(20, 30))
 
         tk.Button(frame, text="Start Detection", font=('Arial', 16), width=25, command=lambda: open_detection_screen(self)).pack(pady=15)
 
-        tk.Button(frame, text="Open Feedback Folder", font=('Arial', 16), width=25, command=open_feedback_folder).pack(pady=15)
+        tk.Button(frame, text="Open Feedback Folder", font=('Arial', 16), width=25, command=self.open_feedback_folder).pack(pady=15)
 
-        tk.Button(frame, text="Open Screenshots Folder", font=('Arial', 16), width=25, command=open_screenshots_folder).pack(pady=15)
+        tk.Button(frame, text="Open Screenshots Folder", font=('Arial', 16), width=25, command=self.open_screenshots_folder).pack(pady=15)
 
         tk.Button(frame, text="Retrain Detection Model", font=('Arial', 16), width=25, command=retrain_model).pack(pady=15)
 
         tk.Button(frame, text="Quit", font=('Arial', 16), width=25, command=quit).pack(pady=15)
 
+    def open_feedback_folder(self):
+        folder_path = os.path.abspath(settings.FEEDBACK_PATH)
+        os.makedirs(folder_path, exist_ok=True)
+        subprocess.Popen(f'explorer "{folder_path}"' if os.name == "nt" else ["open", folder_path])
+
+    def open_screenshots_folder(self):
+        folder_path = os.path.abspath(settings.SCREENSHOTS_PATH)
+        os.makedirs(folder_path, exist_ok=True)
+        subprocess.Popen(f'explorer "{folder_path}"' if os.name == "nt" else ["open", folder_path])
 
 class DetectionScreen(tk.Frame):
     def __init__(self, parent, controller):
@@ -106,27 +115,27 @@ class DetectionScreen(tk.Frame):
         self.controller.show_frame("MainMenu")
 
 
-class MainMenu(tk.Frame):
+# class MainMenu(tk.Frame):
     
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
+#     def __init__(self, parent, controller):
+#         super().__init__(parent)
+#         self.controller = controller
 
-        frame = tk.Frame(self)
+#         frame = tk.Frame(self)
         
-        frame.pack(expand=True, fill="both")
+#         frame.pack(expand=True, fill="both")
         
-        tk.Label(frame, text="Hawkeye Security System", font=('Arial', 24)).pack(pady=(20, 30))
+#         tk.Label(frame, text="Hawkeye Security System", font=('Arial', 24)).pack(pady=(20, 30))
 
-        tk.Button(frame, text="Start Detection", font=('Arial', 16), width=25, command=lambda: open_detection_screen(self)).pack(pady=15)
+#         tk.Button(frame, text="Start Detection", font=('Arial', 16), width=25, command=lambda: open_detection_screen(self)).pack(pady=15)
 
-        tk.Button(frame, text="Open Feedback Folder", font=('Arial', 16), width=25, command=open_feedback_folder).pack(pady=15)
+#         tk.Button(frame, text="Open Feedback Folder", font=('Arial', 16), width=25, command=open_feedback_folder).pack(pady=15)
 
-        tk.Button(frame, text="Open Screenshots Folder", font=('Arial', 16), width=25, command=open_screenshots_folder).pack(pady=15)
+#         tk.Button(frame, text="Open Screenshots Folder", font=('Arial', 16), width=25, command=open_screenshots_folder).pack(pady=15)
 
-        tk.Button(frame, text="Retrain Detection Model", font=('Arial', 16), width=25, command=retrain_model).pack(pady=15)
+#         tk.Button(frame, text="Retrain Detection Model", font=('Arial', 16), width=25, command=retrain_model).pack(pady=15)
 
-        tk.Button(frame, text="Quit", font=('Arial', 16), width=25, command=quit).pack(pady=15)
+#         tk.Button(frame, text="Quit", font=('Arial', 16), width=25, command=quit).pack(pady=15)
 
 if __name__ == "__main__":
     app = HawkEyeApp()
