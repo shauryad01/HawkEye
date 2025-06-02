@@ -1,74 +1,88 @@
 import cv2
 import numpy as np
-from keras.models import load_model
-import queue
-import settings
 import threading
 import time
+import settings
+from keras.models import load_model
+from queue import Queue
+from HawkEyeApp import EventDetected
 from utils import save_screenshot
 
-# Load the model and class labels once
-model = load_model("efficientnetb0_classifier.h5", compile=False)
-class_names = open("labels.txt", "r").readlines()
+# Load the classification model
+try:
+    model = load_model(settings.MODEL_PATH, compile=False)
+except Exception as e:
+    raise RuntimeError(f"[ERROR] Could not load model: {e}")
 
-import os
-import datetime
+# Load class labels
+try:
+    with open(settings.LABELS_PATH, "r") as f:
+        class_names = [line.strip() for line in f.readlines()]
+except Exception as e:
+    print(f"[WARN] Could not load labels: {e}")
+    # Fallback labels
+    class_names = ["Harassment", "NoHarassment"]
 
 latest_confidence = 0.0
 
-def run_detection(self, frame_queue, event):
+def run_detection(self,controller, frame_queue, event=settings.Harassment_Detected, ui_callback=None):
     print("[DETECT] Detection process started.")
     global latest_confidence
-    frame_skip = settings.frame_skip
     frame_count = 0
-    settings.detection_threshold = 0.85  # Optional, for future use
 
     while not event.is_set():
-        if not frame_queue.empty():
-            frame = frame_queue.get()
-            # confidence = gui.fake_model_confidence(frame)
-            # latest_confidence = confidence
-            # Validate the frame before using it
-            if frame is None or not hasattr(frame, 'shape') or frame.size == 0:
-                print("[DETECT] Invalid frame received. Skipping.")
-                continue
-                
-            try:
-                # Rotate frame if it's in landscape orientation
-                h, w = frame.shape[:2]
-                if w > h:
-                    frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        if frame_queue.empty():
+            time.sleep(0.01)
+            continue
 
-                try:
-                    display_frame = frame.copy()
-                except Exception as e:
-                    print(f"[DETECT] Failed to copy frame: {e}")
-                    continue
+        frame = frame_queue.get()
 
-            except Exception as e:
-                print(f"[DETECT] Failed to copy frame: {e}")
-                continue
+        # Validate frame
+        if frame is None or not hasattr(frame, 'shape') or frame.size == 0:
+            print("[WARN] Invalid frame received. Skipping.")
+            continue
 
-            frame_count += 1
+        # Rotate landscape frames
+        h, w = frame.shape[:2]
+        if w > h:
+            frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
-            if frame_count % frame_skip == 0:
-                try:
-                    resized = cv2.resize(frame, (224, 224), interpolation=cv2.INTER_AREA)
-                    image = np.asarray(resized, dtype=np.float32).reshape(1, 224, 224, 3)
-                    image = (image / 127.5) - 1
+        frame_count += 1
+        if frame_count % settings.frame_skip != 0:
+            continue
 
-                    prediction = model.predict(image, verbose=0)
-                    index = np.argmax(prediction)
-                    class_name = class_names[index].strip()
-                    confidence_score = prediction[0][index]
+        try:
+            # Preprocess the frame
+            resized = cv2.resize(frame, (224, 224), interpolation=cv2.INTER_AREA)
+            image = np.asarray(resized, dtype=np.float32).reshape(1, 224, 224, 3)
+            image = image / 255.0  # Match training normalization
 
-                    print(f"[DETECT] Class: {class_name} | Confidence: {confidence_score*100:.2f}%")
+            # Prediction
+            prediction = model.predict(image, verbose=0)
+            index = np.argmax(prediction)
+            class_name = class_names[index]
+            confidence = prediction[0][index]
+            latest_confidence = confidence
+            if ui_callback:
+                ui_callback(f"{class_name} ({confidence * 100:.2f}%)")
 
-                    if class_name == "0 Harassment True" and confidence_score >= 0.85:
-                        print("[DETECT] Emergency Detected!")
-                        save_screenshot(frame)
-                        event.set()
-                    
-                except Exception as e:
-                    print(f"[DETECT] Prediction failed: {e}")
-                    continue
+
+            print(f"[DETECT] Class: {class_name} | Confidence: {confidence * 100:.2f}%")
+
+            if settings.DEBUG:
+                print("[DEBUG] Raw prediction vector:", prediction)
+                for i, label in enumerate(class_names):
+                    print(f"[DEBUG] {label}: {prediction[0][i]:.4f}")
+
+            # Trigger on positive class with confidence
+            if "True" in class_name and confidence >= settings.detection_threshold:
+                print("[ALERT] Emergency Detected! Saving screenshot.")
+                save_screenshot(frame, settings.SCREENSHOTS_PATH)
+                event.set()
+                EventDetected(self, controller)
+
+        except Exception as e:
+            print(f"[ERROR] Detection failed: {e}")
+            continue
+
+    print("[DETECT] Detection process ended.")

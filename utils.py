@@ -4,10 +4,12 @@ import cv2
 import subprocess
 import settings
 import threading
+import model_training
 import HawkEyeApp
 
 
-def save_screenshot(frame, folder=settings.SCREENSHOTS_PATH):
+
+def save_screenshot(frame, folder):
     # Create folder if it doesn't exist
     if not os.path.exists(folder):
         os.makedirs(folder)
@@ -38,3 +40,22 @@ def open_detection_screen(self):
     self.controller.show_frame("DetectionScreen")
     detection_frame = self.controller.frames["DetectionScreen"]
     threading.Thread(target=lambda: HawkEyeApp.DetectionScreen.start_camera(detection_frame), daemon=True).start()
+
+
+def start_detection_pipeline(self, target, frame_queue, event, ui_callback=None):
+    if not self.running:
+        self.start_camera()
+    from detection_module import run_detection
+    threading.Thread(
+        target=run_detection,args=(self, self.controller, frame_queue, event, ui_callback), daemon=True).start()
+
+def start_model_training(root):
+    from HawkEyeApp import training_progress
+
+    loading_window = training_progress(root)
+
+    def retrain_and_close():
+        model_training.retrain_model()
+        root.after(0, loading_window.destroy)
+
+    threading.Thread(target=retrain_and_close, daemon=True).start()

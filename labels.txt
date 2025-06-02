@@ -1,0 +1,2 @@
+0 Harassment True
+1 NoHarassment False
