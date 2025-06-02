@@ -1,10 +1,9 @@
 import tkinter as tk
-from detection_module import run_detection
-from model_training import retrain_model
+from tkinter import ttk
 import cv2
 import time
 import settings 
-from utils import open_detection_screen, open_feedback_folder, open_screenshots_folder
+from utils import *
 import threading
 import queue
 frame_queue = queue.Queue(maxsize=10)
@@ -44,14 +43,25 @@ class MainMenu(tk.Frame):
 
         tk.Button(frame, text="Start Detection", font=('Arial', 16), width=25, command=lambda: open_detection_screen(self)).pack(pady=15)
 
-        tk.Button(frame, text="Open Feedback Folder", font=('Arial', 16), width=25, command=self.open_feedback_folder).pack(pady=15)
+        tk.Button(frame, text="Open Feedback Folder", font=('Arial', 16), width=25, command=lambda:open_feedback_folder(self)).pack(pady=15)
 
-        tk.Button(frame, text="Open Screenshots Folder", font=('Arial', 16), width=25, command=self.open_screenshots_folder).pack(pady=15)
+        tk.Button(frame, text="Open Screenshots Folder", font=('Arial', 16), width=25, command=lambda:open_screenshots_folder(self)).pack(pady=15)
 
-        tk.Button(frame, text="Retrain Detection Model", font=('Arial', 16), width=25, command=retrain_model).pack(pady=15)
+        tk.Button(frame, text="Retrain Detection Model", font=('Arial', 16), width=25, command=lambda: start_model_training(self)).pack(pady=15)
 
         tk.Button(frame, text="Quit", font=('Arial', 16), width=25, command=quit).pack(pady=15)
 
+class training_progress(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Training Model")
+        self.geometry("400x150")
+        self.resizable(False, False)
+
+        tk.Label(self, text="Training model...\nPlease wait", font=("Arial", 14)).pack(pady=20)
+        self.progress = ttk.Progressbar(self, mode='indeterminate', length=300)
+        self.progress.pack(pady=10)
+        self.progress.start()
 
 class DetectionScreen(tk.Frame):
     def __init__(self, parent, controller):
@@ -68,16 +78,24 @@ class DetectionScreen(tk.Frame):
         self.cap = None
         self.running = False
 
-        tk.Button(self, text="Run Detection", font=("Arial", 16), command=lambda: run_detection(self, frame_queue, event=settings.Harassment_Detected)).pack(pady=15)
-
-        self.detection_label = tk.Label(self, text="Detection: 0%", font=("Arial", 16))
+        tk.Button(self, text="Run Detection", font=("Arial", 16), command=lambda: start_detection_pipeline(self, target="run_detection", frame_queue=frame_queue, event = settings.Harassment_Detected, ui_callback=self.update_detection_label)).pack(pady=15)
+        self.detection_label = tk.Label(self, text="", font=("Arial", 16))
         self.detection_label.place(relx=1, rely=0, x=-30, y=25, anchor="ne")
+        
 
         if settings.DEBUG:
             from HawkEyeApp import EventDetected
-            tk.Button(self, text="DEBUGGING: MANUAL EVENT SET", font=("Arial", 16), command=lambda: threading.Thread(target=lambda: EventDetected(self, controller), daemon=True).start()).place(relx=0, rely=0, x=150, y=250)
+            tk.Button(self, text="DEBUGGING: MANUAL EVENT SET", font=("Arial", 16), command=lambda: EventDetected(self, controller=self.controller)).place(relx=0, rely=0, x=150, y=250)
         tk.Button(self, text="← Back to Menu", font=("Arial", 16), command=self.back_to_menu).place(relx=0, rely=0, x=1, y=15)
 
+    def update_detection_label(self, text):
+        if "Harassment" in text:
+            color = "red"
+        if "NoHarassment" in text:
+            color = "green"
+        self.detection_label.config(text=f"Detection: {text}", fg=color)
+
+    
     def start_camera(self):
         if not self.running:
             self.cap = cv2.VideoCapture(0)
@@ -91,8 +109,10 @@ class DetectionScreen(tk.Frame):
             if ret:
                 import cv2
                 from PIL import Image, ImageTk
-                if not frame_queue.full():
-                    frame_queue.put(frame.copy())
+                try:
+                    frame_queue.put_nowait(frame.copy())
+                except queue.Full:
+                    pass
 
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 frame = cv2.resize(frame, (640, 480))
@@ -123,8 +143,42 @@ class EventDetected(tk.Toplevel):
         self.configure(bg="red")
 
         label = tk.Label(self, text="⚠️ Harassment Event Detected!", font=("Arial", 14), bg="red", fg="white")
-        label.pack(pady=40)
+        label.pack(pady=10)
 
-        btn = tk.Button(self, text="OK", font=("Arial", 12), command=self.destroy)
-        btn.pack(pady=10)
+        # Create a frame to hold the buttons
+        btn_frame = tk.Frame(self, bg="red")
+        btn_frame.pack(pady=20)
+
+        # False Positive Button
+        btn_fp = tk.Button(btn_frame, text="False Positive", font=("Arial", 12),command=lambda: self.fp_btn(folder=settings.FEEDBACK_PATH_false_neg))
+        btn_fp.pack(side="left", padx=10)
+
+        # OK Button
+        btn_ok = tk.Button(btn_frame, text="OK", font=("Arial", 12),command=lambda: self.ok_btn(folder=settings.SCREENSHOTS_PATH))
+        btn_ok.pack(side="left", padx=10)
+
+        # False Negative Button
+        btn_fn = tk.Button(btn_frame, text="False Negative", font=("Arial", 12),command=lambda: self.fn_btn(folder=settings.FEEDBACK_PATH_false_pos))
+        btn_fn.pack(side="left", padx=10)
+
+
+    def fp_btn(self, folder):
+        if not frame_queue.empty():
+            frame = frame_queue.get()
+            save_screenshot(frame, folder)
+        self.destroy()
+
+    def fn_btn(self, folder):
+        if not frame_queue.empty():
+            frame = frame_queue.get()
+            save_screenshot(frame, folder)
+        self.destroy()
+
+    def ok_btn(self, folder):
+        if not frame_queue.empty():
+            frame = frame_queue.get()
+            save_screenshot(frame, folder)
+        self.destroy()
+
+
 
