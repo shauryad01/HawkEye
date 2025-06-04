@@ -1,7 +1,7 @@
 # === Constants ===
 dataset_path = 'dataset'     # Dataset folder
 feedback_path = 'feedback_folder'   # Feedback folder
-img_size = (224, 224)        # EfficientNetV2 default input size
+img_size = (224, 224)        # MobileNetV2 default input size
 batch_size = 32
 epochs = 15  # Tune based on overfitting/underfitting
 
@@ -10,9 +10,9 @@ def retrain_model():
     import shutil
     import tempfile
     import tensorflow as tf
-    from tensorflow.keras.preprocessing.image import ImageDataGenerator
-    from tensorflow.keras.applications import EfficientNetV2B0
-    from tensorflow.keras import layers, models
+    from tensorflow.keras.preprocessing.image import ImageDataGenerator # type: ignore
+    from tensorflow.keras.applications import MobileNetV2 # type: ignore
+    from tensorflow.keras import layers, models # type: ignore
 
     # === Step 1: Merge dataset and feedback ===
     def merge_datasets(original_path, feedback_path, screenshots_path):
@@ -88,8 +88,8 @@ def retrain_model():
 
     num_classes = train_data.num_classes
 
-    # === Step 3: Build Model with EfficientNetV2 ===
-    base_model = EfficientNetV2B0(
+    # === Step 3: Build Model with MobileNetV2 ===
+    base_model = MobileNetV2(
         input_shape=(img_size[0], img_size[1], 3),
         include_top=False,
         weights='imagenet'
@@ -117,8 +117,8 @@ def retrain_model():
     model.fit(train_data, validation_data=val_data, epochs=epochs)
 
     # === Step 5: Save Model ===
-    model.save("efficientnetv2_with_feedback.h5")
-    print("[INFO] Model saved as 'efficientnetv2_with_feedback.h5'")
+    model.save("mobilenetv2_with_feedback.h5")
+    print("[INFO] Model saved as 'mobilenetv2_with_feedback.h5'")
 
     # Cleanup merged temp dir
     shutil.rmtree(merged_data_path)
