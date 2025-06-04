@@ -8,7 +8,7 @@ FEEDBACK_PATH_false_neg = r"feedback_folder\false_negative"
 FEEDBACK_PATH_false_pos = r"feedback_folder\false_positive"
 SCREENSHOTS_PATH = r"screenshots_folder"
 
-MODEL_PATH= "efficientnetv2_with_feedback.h5"
+MODEL_PATH= "mobilenetv2_with_feedback.h5"
 LABELS_PATH= "labels.txt"
 
 
