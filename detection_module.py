@@ -30,7 +30,7 @@ def run_detection(self,controller, frame_queue, event=settings.Harassment_Detect
     global latest_confidence
     frame_count = 0
 
-    while not event.is_set():
+    while not event.is_set:
         if frame_queue.empty():
             time.sleep(0.01)
             continue
