@@ -158,7 +158,7 @@ class EventDetected(tk.Toplevel):
         btn_ok.pack(side="left", padx=10)
 
         # False Negative Button
-        btn_fn = tk.Button(btn_frame, text="False Negative", font=("Arial", 12),command=lambda: self.fn_btn(folder=settings.FEEDBACK_PATH_false_pos))
+        btn_fn = tk.Button(btn_frame, text="False Negative", font=("Arial", 12),command=lambda: self.fn_btn(folder=settings.FEEDBACK_PATH_false_neg))
         btn_fn.pack(side="left", padx=10)
 
 
