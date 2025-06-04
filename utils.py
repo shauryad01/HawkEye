@@ -36,18 +36,21 @@ def open_screenshots_folder(self):
     subprocess.Popen(f'explorer "{folder_path}"' if os.name == "nt" else ["open", folder_path])
 
 
-def open_detection_screen(self):
+def open_detection_screen(self, video_source):
     self.controller.show_frame("DetectionScreen")
     detection_frame = self.controller.frames["DetectionScreen"]
-    threading.Thread(target=lambda: HawkEyeApp.DetectionScreen.start_camera(detection_frame), daemon=True).start()
+    if settings.DEBUG:
+        threading.Thread(target=lambda: HawkEyeApp.DetectionScreen.start_camera(video_source=1, self=detection_frame), daemon=True).start()
+    else:
+        threading.Thread(target=lambda: HawkEyeApp.DetectionScreen.start_camera(video_source=0, self=detection_frame), daemon=True).start()
 
 
-def start_detection_pipeline(self, target, frame_queue, event, ui_callback=None):
+def start_detection_pipeline(self,video_source, frame_queue, event, ui_callback=None):
+    event.is_set = False
     if not self.running:
-        self.start_camera()
+        self.start_camera(video_source)
     from detection_module import run_detection
-    threading.Thread(
-        target=run_detection,args=(self, self.controller, frame_queue, event, ui_callback), daemon=True).start()
+    threading.Thread(target=run_detection,args=(self, self.controller, frame_queue, event, ui_callback), daemon=True).start()
 
 def start_model_training(root):
     from HawkEyeApp import training_progress

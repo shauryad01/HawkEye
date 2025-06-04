@@ -40,8 +40,11 @@ class MainMenu(tk.Frame):
         frame.pack(expand=True, fill="both")
 
         tk.Label(frame, text="Hawkeye Security System", font=('Arial', 24)).pack(pady=(20, 30))
-
-        tk.Button(frame, text="Start Detection", font=('Arial', 16), width=25, command=lambda: open_detection_screen(self)).pack(pady=15)
+        
+        if settings.DEBUG:
+            tk.Button(frame, text="Start Detection", font=('Arial', 16), width=25, command=lambda: open_detection_screen(self, video_source=1)).pack(pady=15)
+        else:
+            tk.Button(frame, text="Start Detection", font=('Arial', 16), width=25, command=lambda: open_detection_screen(self, video_source=0)).pack(pady=15)
 
         tk.Button(frame, text="Open Feedback Folder", font=('Arial', 16), width=25, command=lambda:open_feedback_folder(self)).pack(pady=15)
 
@@ -77,8 +80,13 @@ class DetectionScreen(tk.Frame):
         
         self.cap = None
         self.running = False
+        
+        if settings.DEBUG:
+            tk.Button(self, text="Run Detection", font=("Arial", 16), command=lambda: start_detection_pipeline(self, video_source =1, frame_queue=frame_queue, event = settings.Harassment_Detected, ui_callback=self.update_detection_label)).pack(pady=15)
+        else:
+            tk.Button(self, text="Run Detection", font=("Arial", 16), command=lambda: start_detection_pipeline(self, video_source=0, frame_queue=frame_queue, event = settings.Harassment_Detected, ui_callback=self.update_detection_label)).pack(pady=15)
 
-        tk.Button(self, text="Run Detection", font=("Arial", 16), command=lambda: start_detection_pipeline(self, target="run_detection", frame_queue=frame_queue, event = settings.Harassment_Detected, ui_callback=self.update_detection_label)).pack(pady=15)
+
         self.detection_label = tk.Label(self, text="", font=("Arial", 16))
         self.detection_label.place(relx=1, rely=0, x=-30, y=25, anchor="ne")
         
@@ -86,6 +94,8 @@ class DetectionScreen(tk.Frame):
         if settings.DEBUG:
             from HawkEyeApp import EventDetected
             tk.Button(self, text="DEBUGGING: MANUAL EVENT SET", font=("Arial", 16), command=lambda: EventDetected(self, controller=self.controller)).place(relx=0, rely=0, x=150, y=250)
+            tk.Button(self, text="DEBUGGING: SHOW TRUE CASE", font=("Arial", 16), command=lambda: start_detection_pipeline(self, 1, frame_queue, settings.Harassment_Detected, self.update_detection_label) ).place(relx=0, rely=0, x=50, y=250)
+
         tk.Button(self, text="← Back to Menu", font=("Arial", 16), command=self.back_to_menu).place(relx=0, rely=0, x=1, y=15)
 
     def update_detection_label(self, text):
@@ -96,9 +106,9 @@ class DetectionScreen(tk.Frame):
         self.detection_label.config(text=f"Detection: {text}", fg=color)
 
     
-    def start_camera(self):
+    def start_camera(self, video_source):
         if not self.running:
-            self.cap = cv2.VideoCapture(0)
+            self.cap = cv2.VideoCapture(video_source)
             time.sleep(1)
             self.running = True
             self.show_cam()
@@ -155,11 +165,11 @@ class EventDetected(tk.Toplevel):
 
         # OK Button
         btn_ok = tk.Button(btn_frame, text="OK", font=("Arial", 12),command=lambda: self.ok_btn(folder=settings.SCREENSHOTS_PATH))
-        btn_ok.pack(side="center", padx=10)
+        btn_ok.pack(side="left", padx=10)
 
         # False Negative Button
         btn_fn = tk.Button(btn_frame, text="False Negative", font=("Arial", 12),command=lambda: self.fn_btn(folder=settings.FEEDBACK_PATH_false_neg))
-        btn_fn.pack(side="right", padx=10)
+        btn_fn.pack(side="left", padx=10)
 
 
     def fp_btn(self, folder):
