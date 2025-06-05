@@ -80,6 +80,7 @@ def run_detection(self,controller, frame_queue, event=settings.Harassment_Detect
                 save_screenshot(frame, settings.SCREENSHOTS_PATH)
                 event.set()
                 EventDetected(self, controller)
+                event.clear()
 
         except Exception as e:
             print(f"[ERROR] Detection failed: {e}")

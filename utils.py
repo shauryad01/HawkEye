@@ -40,7 +40,7 @@ def open_detection_screen(self, video_source):
     self.controller.show_frame("DetectionScreen")
     detection_frame = self.controller.frames["DetectionScreen"]
     if settings.DEBUG:
-        threading.Thread(target=lambda: HawkEyeApp.DetectionScreen.start_camera(video_source=1, self=detection_frame), daemon=True).start()
+        threading.Thread(target=lambda: HawkEyeApp.DetectionScreen.start_camera(video_source="samplevid.mp4", self=detection_frame), daemon=True).start()
     else:
         threading.Thread(target=lambda: HawkEyeApp.DetectionScreen.start_camera(video_source=0, self=detection_frame), daemon=True).start()
 
