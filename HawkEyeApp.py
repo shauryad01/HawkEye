@@ -83,6 +83,8 @@ class DetectionScreen(tk.Frame):
         
         if settings.DEBUG:
             tk.Button(self, text="Run Detection", font=("Arial", 16), command=lambda: start_detection_pipeline(self, video_source =1, frame_queue=frame_queue, event = settings.Harassment_Detected, ui_callback=self.update_detection_label)).pack(pady=15)
+            tk.Button(self, text="False Neg", font=("Arial", 16), command=lambda: EventDetected.fn_btn(self, settings.FEEDBACK_PATH_false_neg)).place(relx=0, rely=0, x=20, y=350)
+            tk.Button(self, text="False Pos", font=("Arial", 16), command=lambda: EventDetected.fp_btn(self, settings.FEEDBACK_PATH_false_pos)).place(relx=0, rely=0, x=20, y=450)
         else:
             tk.Button(self, text="Run Detection", font=("Arial", 16), command=lambda: start_detection_pipeline(self, video_source=0, frame_queue=frame_queue, event = settings.Harassment_Detected, ui_callback=self.update_detection_label)).pack(pady=15)
 
@@ -176,13 +178,15 @@ class EventDetected(tk.Toplevel):
         if not frame_queue.empty():
             frame = frame_queue.get()
             save_screenshot(frame, folder)
-        self.destroy()
+        if not settings.DEBUG:
+            self.destroy()
 
     def fn_btn(self, folder):
         if not frame_queue.empty():
             frame = frame_queue.get()
             save_screenshot(frame, folder)
-        self.destroy()
+        if not settings.DEBUG:
+            self.destroy()
 
     def ok_btn(self, folder):
         if not frame_queue.empty():

@@ -18,7 +18,7 @@ Harassment_Detected.clear()
 
 detection_threshold = 0.85
 
-frame_skip=1
+frame_skip=5
 
 global DEBUG
 DEBUG = False
