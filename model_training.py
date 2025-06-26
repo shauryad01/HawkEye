@@ -1,7 +1,7 @@
 # === Constants ===
 dataset_path = 'dataset'     # Dataset folder
 feedback_path = 'feedback_folder'   # Feedback folder
-img_size = (270, 480)        # MobileNetV2 default input size
+img_size = (224, 224)        # MobileNetV2 default input size
 batch_size = 32
 epochs = 15  # Tune based on overfitting/underfitting
 
